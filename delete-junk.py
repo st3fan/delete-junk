@@ -7,7 +7,7 @@
 #
 
 
-import email, os, sys
+import email, getpass, logging, os, sys, time
 from imapclient import IMAPClient
 
 
@@ -25,8 +25,9 @@ def delete_junk(hostname, username, password, threshold):
             spam_score = float(message.get("X-Rspamd-Score", 0.0))
 
             if spam_score > threshold:
-                print('MOVING #%d: %2.2f %s' % (msgid, spam_score, envelope.subject.decode()))
+                logging.info('MOVING #%d: %2.2f %s' % (msgid, spam_score, envelope.subject.decode()))
                 client.move(msgid, 'Trash')
+
 
 
 if __name__ == "__main__":
@@ -35,8 +36,20 @@ if __name__ == "__main__":
     username = os.getenv("JUNK_USERNAME")
     password = os.getenv("JUNK_PASSWORD")
 
-    if hostname is None or username is None or password is None:
+    if hostname is None and username is None and password is None:
+        hostname = input("hostname: ")
+        username = input("username: ")
+        password = getpass.getpass(prompt='Password: ', stream=None)
+    else:
         print("You have to set the JUNK_{HOSTNAME,USERNAME,PASSWORD} environment variables.")
         sys.exit(1)
 
-    delete_junk(hostname, username, password, 17.5)
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, datefmt='%Y-%m-%d %H:%M:%S')
+
+    while True:
+        logging.info("Deleting junk mail with score > 17.5")
+        try:
+            delete_junk(hostname, username, password, 17.5)
+        except Exception as e:
+            print(e)
+        time.sleep(300)
