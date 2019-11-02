@@ -51,14 +51,11 @@ func main() {
 	seqsetToDelete := new(imap.SeqSet)
 
 	for msg := range messages {
-		//log.Println("*", msg.Envelope.Subject)
 		for name, value := range msg.Body {
 			if name.BodyPartName.Specifier == imap.HeaderSpecifier {
-				//log.Println(value)
-				//r := strings.NewReader(value)
 				m, err := mail.ReadMessage(value)
 				if err != nil {
-					log.Fatal(err)
+					continue
 				}
 
 				score, err := strconv.ParseFloat(m.Header.Get("X-Rspamd-Score"), 64)
@@ -78,11 +75,13 @@ func main() {
 		item := imap.FormatFlagsOp(imap.AddFlags, true)
 		value := []interface{}{imap.DeletedFlag}
 		if err := c.Store(seqsetToDelete, item, value, nil); err != nil {
-			log.Fatal(err)
+			log.Println("Failed to mark messages to be deleted:", err)
+			return
 		}
 
 		if err := c.Expunge(nil); err != nil {
-			log.Println("Failed to Expunge:", err)
+			log.Println("Failed to expunge messages:", err)
+			return
 		}
 	}
 }
